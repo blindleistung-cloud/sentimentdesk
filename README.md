@@ -58,7 +58,7 @@ Non-goals:
 * Pydantic (schema + validation)
 * SQLAlchemy / asyncpg (PostgreSQL)
 * Redis (cache + queue + rate-limits)
-* Worker/Scheduler: Celery (Redis broker) or RQ + APScheduler (final choice documented in `docs/decisions/`)
+* Worker/Scheduler: **RQ + APScheduler** (selected for Raspberry Pi OS / resource efficiency)
 
 ### Frontend
 
@@ -120,21 +120,29 @@ A concrete schema (YAML/JSON) will be added in `config/schema.json`.
 
 ## 6. Providers (2-provider strategy)
 
-### Provider requirements
+### Selection criteria (v1)
 
-* Fundamentals: KGV/KBV/KCV or components to compute them
-* Financials: revenue, earnings, operating cashflow
-* Capex: capex series or capex-related fields
-* Company metadata: ticker mapping, market cap (if available)
+* **Free tier / no direct cost** (acceptable: free account + API key)
+* Fundamentals and financial statements sufficient to compute **KGV/KBV/KCV** (or their components)
+* Capex or cash-flow line items sufficient for **Capex-related** fields
+* Stable documentation and reasonable rate limits
 
-### Provider strategy
+### Chosen providers (v1)
 
-* **Primary provider**: default data source
-* **Fallback provider**: used if primary misses symbols/fields or rate-limits
+1. **Primary: SimFin (Free account)**
 
-All provider outputs are normalized into an internal schema (`MarketDataSnapshot`).
+   * Focus: fundamentals/financials (incl. cash-flow and Capex-related items), broad equity coverage
+   * Strength: bulk-style usage via Python tooling and local disk caching patterns
 
----
+2. **Fallback: Finnhub (Free plan)**
+
+   * Focus: company profile + supplemental fundamentals and quotes where needed
+   * Strength: generous per-minute rate limits on the free plan (personal-use terms apply)
+
+Notes:
+
+* Provider usage is centralized and normalized into an internal `MarketDataSnapshot` model.
+* If SimFin lacks a symbol/field or is temporarily unavailable, Finnhub is used as fallback.
 
 ## 7. Hard Caching Policy
 
@@ -243,3 +251,18 @@ In hard-cache mode, the system:
 ## 11. License & Disclaimer
 
 SentimentDesk is a decision-support tool. It does not provide financial advice or trading recommendations.
+
+---
+
+## 12. Quick Start (placeholder)
+
+> Will be filled once the repository structure and Docker Compose are committed.
+
+---
+
+## 13. Next documents
+
+* `agents.md` (system behavior, parsing rules, validation, caching, job orchestration)
+* `config/schema.json` (settings schema)
+* `docs/provider-adapters.md` (provider endpoints and normalization)
+
