@@ -71,7 +71,18 @@ Non-goals:
 
 ---
 
-## 4. Sentiment Model
+## 4. Project Structure (target layout)
+
+Target layout (some folders will be added as milestones land):
+
+* `backend/` - API, parsing, providers, jobs
+* `frontend/` - internal UI (React + Tremor)
+* `infra/` - Docker Compose and env templates
+* `docs/` - design decisions and provider docs
+* `config/` - settings schema and repo defaults
+* `docs/samples/weekly-reports/` - sample weekly report Markdown files for parser/UI testing
+
+## 5. Sentiment Model
 
 ### Layers
 
@@ -98,7 +109,7 @@ Defaults:
 
 ---
 
-## 5. Configuration (Settings)
+## 6. Configuration (Settings)
 
 Version 1 must allow:
 
@@ -118,7 +129,7 @@ A concrete schema (YAML/JSON) will be added in `config/schema.json`.
 
 ---
 
-## 6. Providers (2-provider strategy)
+## 7. Providers (2-provider strategy)
 
 ### Selection criteria (v1)
 
@@ -144,7 +155,7 @@ Notes:
 * Provider usage is centralized and normalized into an internal `MarketDataSnapshot` model.
 * If SimFin lacks a symbol/field or is temporarily unavailable, Finnhub is used as fallback.
 
-## 7. Hard Caching Policy
+## 8. Hard Caching Policy
 
 Goal: **minimize API calls** and respect free-tier limits.
 
@@ -171,7 +182,7 @@ In hard-cache mode, the system:
 
 ---
 
-## 8. Database Model (core tables)
+## 9. Database Model (core tables)
 
 ### `weekly_reports`
 
@@ -203,7 +214,7 @@ In hard-cache mode, the system:
 
 ---
 
-## 9. Internal-only Deployment (Raspberry Pi OS / Debian)
+## 10. Internal-only Deployment (Raspberry Pi OS / Debian)
 
 ### Assumptions
 
@@ -218,7 +229,7 @@ In hard-cache mode, the system:
 
 ---
 
-## 10. Development Roadmap (v1)
+## 11. Development Roadmap (v1)
 
 ### Milestone 1 — Core pipeline
 
@@ -248,21 +259,27 @@ In hard-cache mode, the system:
 
 ---
 
-## 11. License & Disclaimer
+## 12. License & Disclaimer
 
 SentimentDesk is a decision-support tool. It does not provide financial advice or trading recommendations.
 
 ---
 
-## 12. Quick Start (placeholder)
+## 13. Quick Start
 
-> Will be filled once the repository structure and Docker Compose are committed.
+1. Read `AGENTS.md` for workflows, constraints, and commands.
+2. Keep your weekly report Markdown samples handy (recommended: `docs/samples/weekly-reports/`) to test parsing and input flow.
+3. When `infra/docker-compose.yml` is present, run:
+
+```
+docker compose -f infra/docker-compose.yml up --build
+```
 
 ---
 
-## 13. Next documents
+## 14. Next documents
 
-* `agents.md` (system behavior, parsing rules, validation, caching, job orchestration)
+* `AGENTS.md` (system behavior, parsing rules, validation, caching, job orchestration)
 * `config/schema.json` (settings schema)
 * `docs/provider-adapters.md` (provider endpoints and normalization)
 
