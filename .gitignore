@@ -1,1 +1,12 @@
 docs/samples/weekly-reports/
+providers.env
+backend/.venv/
+backend/__pycache__/
+backend/.pytest_cache/
+frontend/node_modules/
+frontend/dist/
+.env
+.env.*
+*.pyc
+frontend/.vite/
+!**/.env.example
