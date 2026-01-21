@@ -1,3 +1,10 @@
+export type MarketDataSnapshot = {
+  provider: string;
+  symbol: string;
+  payload: Record<string, unknown>;
+  status: string;
+};
+
 export type EvidenceMatch = {
   field: string;
   rule_id: string;
@@ -77,6 +84,7 @@ export type ParseResult = {
   raw_text: string;
   cleaned_text: string;
   layers: LayerInput;
+  provider_snapshots: MarketDataSnapshot[];
   scores: ScoreResult;
   evidence: EvidenceMatch[];
 };
