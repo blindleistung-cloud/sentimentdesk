@@ -1,0 +1,22 @@
+[project]
+name = "sentimentdesk-backend"
+version = "0.1.0"
+description = "SentimentDesk backend"
+requires-python = ">=3.14"
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.29",
+  "pydantic>=2.5",
+  "pydantic-settings>=2.1",
+  "sqlalchemy[asyncio]>=2.0",
+  "asyncpg>=0.29",
+  "alembic>=1.13",
+  "psycopg2-binary>=2.9.9",
+]
+
+[tool.uv]
+dev-dependencies = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+

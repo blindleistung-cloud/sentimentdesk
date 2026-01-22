@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: sentimentdesk-backend
+Version: 0.1.0
+Summary: SentimentDesk backend
+Requires-Python: >=3.12
+Requires-Dist: fastapi>=0.110
+Requires-Dist: uvicorn[standard]>=0.29
+Requires-Dist: pydantic>=2.5
+Requires-Dist: pydantic-settings>=2.1
+Requires-Dist: sqlalchemy[asyncio]>=2.0
+Requires-Dist: asyncpg>=0.29
+Requires-Dist: alembic>=1.13
+Requires-Dist: psycopg2-binary>=2.9.9

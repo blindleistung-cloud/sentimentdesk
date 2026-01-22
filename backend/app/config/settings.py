@@ -29,15 +29,14 @@ class RiskThresholds(BaseModel):
     max_score: float = 100.0
 
 
-class ProviderSettings(BaseModel):
-    simfin_api_key: str | None = Field(
-        default=None,
-        validation_alias=AliasChoices("SIMFIN_API_KEY", "SENTIMENTDESK_SIMFIN_API_KEY"),
+class ProviderSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="SENTIMENTDESK_",
+        env_file=("../.env", ".env"),
+        env_file_encoding="utf-8",
     )
-    finnhub_api_key: str | None = Field(
-        default=None,
-        validation_alias=AliasChoices("FINNHUB_API_KEY", "SENTIMENTDESK_FINNHUB_API_KEY"),
-    )
+    simfin_api_key: str | None = None
+    finnhub_api_key: str | None = None
 
 
 class ParserSettings(BaseModel):
@@ -69,6 +68,12 @@ class Settings(BaseSettings):
         env_prefix="SENTIMENTDESK_",
         env_file=("../.env", ".env"),
         env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    database_url: str = Field(
+        default="postgresql+asyncpg://postgres:postgres@localhost/sentimentdesk",
+        validation_alias=AliasChoices("DATABASE_URL", "SENTIMENTDESK_DATABASE_URL"),
     )
 
     weights: WeightSettings = Field(default_factory=WeightSettings)

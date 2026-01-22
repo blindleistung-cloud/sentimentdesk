@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --sd-ink: 0.2 0.02 250;
+  --sd-paper: 0.98 0.01 90;
+  --sd-accent: 0.62 0.14 210;
+  --sd-accent-soft: 0.9 0.05 210;
+  --sd-fog: 0.94 0.02 250;
+  --sd-warning: 0.68 0.16 35;
+  --sd-font-display: "Space Grotesk", "IBM Plex Sans", sans-serif;
+  --sd-font-body: "Work Sans", "IBM Plex Sans", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--sd-font-body);
+  color: oklch(var(--sd-ink) / 1);
+  background-color: oklch(var(--sd-paper) / 1);
+  background-image:
+    radial-gradient(circle at 20% 20%, oklch(0.93 0.05 190) 0%, transparent 40%),
+    radial-gradient(circle at 80% 0%, oklch(0.92 0.05 260) 0%, transparent 45%),
+    linear-gradient(160deg, oklch(0.98 0.01 90) 0%, oklch(0.94 0.02 250) 100%);
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  position: relative;
+}
+
+.app-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(oklch(0.85 0.02 250 / 0.15) 1px, transparent 0);
+  background-size: 26px 26px;
+  opacity: 0.4;
+  pointer-events: none;
+  mask-image: radial-gradient(circle at top left, black 0%, transparent 70%);
+}
+
+.card-panel {
+  background: color-mix(in oklch, oklch(var(--sd-paper) / 1) 88%, white 12%);
+  border: 1px solid color-mix(in oklch, oklch(var(--sd-ink) / 1) 12%, transparent 88%);
+  border-radius: 20px;
+  box-shadow: 0 20px 40px -32px rgba(15, 23, 42, 0.55);
+}
+
+.glass-panel {
+  background: color-mix(in oklch, oklch(var(--sd-paper) / 1) 75%, transparent 25%);
+  border: 1px solid color-mix(in oklch, oklch(var(--sd-ink) / 1) 10%, transparent 90%);
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+}
+
+.section-title {
+  font-family: var(--sd-font-display);
+  letter-spacing: -0.02em;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.fade-in {
+  animation: fade-in 0.6s ease-out forwards;
+}
+
+.rise-in {
+  animation: rise-in 0.7s ease-out forwards;
+}

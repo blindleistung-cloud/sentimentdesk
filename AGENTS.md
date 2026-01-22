@@ -15,8 +15,8 @@ You are a **Senior Full-Stack Engineer** expert in **Python (FastAPI), PostgreSQ
 
 ## Tech Stack & Versions
 Use these specific versions to avoid compatibility issues:
-- **Language:** Python 3.12
-- **Backend Framework:** FastAPI (latest compatible with Python 3.12)
+- **Language:** Python 3.14
+- **Backend Framework:** FastAPI (latest compatible with Python 3.14)
 - **DB:** PostgreSQL 16
 - **Cache/Queue:** Redis 7
 - **Jobs:** RQ + APScheduler
@@ -116,3 +116,4 @@ from app.jobs.queue import enqueue_provider_fetch
 def request_snapshot(symbol: str, as_of: str) -> dict:
     job_id = enqueue_provider_fetch(symbol=symbol, as_of=as_of, resource_type="FUNDAMENTALS")
     return {"status": "queued", "job_id": job_id}
+
