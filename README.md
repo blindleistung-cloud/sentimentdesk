@@ -269,7 +269,14 @@ SentimentDesk is a decision-support tool. It does not provide financial advice o
 
 1. Read `AGENTS.md` for workflows, constraints, and commands.
 2. Keep your weekly report Markdown samples handy (recommended: `docs/samples/weekly-reports/`) to test parsing and input flow.
-3. When `infra/docker-compose.yml` is present, run:
+3. If `uv` cache initialization fails due to permissions, set `UV_CACHE_DIR` to a writable folder before running `uv` commands (create the folder if needed). Examples:
+```
+$env:UV_CACHE_DIR = "$PWD\\.uv-cache"
+```
+```
+export UV_CACHE_DIR="$PWD/.uv-cache"
+```
+4. When `infra/docker-compose.yml` is present, run:
 
 ```
 docker compose -f infra/docker-compose.yml up --build

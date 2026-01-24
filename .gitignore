@@ -1,5 +1,5 @@
 docs/samples/weekly-reports/
-providers.env
+docs/SESSION_NOTES.md
 backend/.venv/
 backend/__pycache__/
 backend/.pytest_cache/

@@ -37,13 +37,13 @@ async def parse_report_endpoint(
     parsed = parse_report(payload.raw_text, settings)
     scores = score_layers(parsed.layers, settings)
 
-    # 2. Fetch provider data (currently stubs)
-    symbols = _extract_symbols(parsed.layers.valuation.overvalued_stocks)
-    provider_snapshots_data = [fetch_with_fallback(symbol) for symbol in symbols]
-
-    # 3. Create and save the report to the database
     week_id = f"{datetime.date.today().isocalendar().year}-W{datetime.date.today().isocalendar().week:02d}"
 
+    # 2. Fetch provider data (currently stubs)
+    symbols = _extract_symbols(parsed.layers.valuation.overvalued_stocks)
+    provider_snapshots_data = [fetch_with_fallback(symbol, week_id) for symbol in symbols]
+
+    # 3. Create and save the report to the database
     db_report = Report(
         week_id=week_id,
         status="processed",

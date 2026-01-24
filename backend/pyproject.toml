@@ -14,9 +14,11 @@ dependencies = [
   "psycopg2-binary>=2.9.9",
 ]
 
-[tool.uv]
-dev-dependencies = ["pytest>=8.0"]
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
 
 [tool.pytest.ini_options]
 addopts = "-q"
+pythonpath = ["."]
 
