@@ -34,6 +34,7 @@ class ProviderSettings(BaseSettings):
         env_prefix="SENTIMENTDESK_",
         env_file=("../.env", ".env"),
         env_file_encoding="utf-8",
+        extra="ignore",
     )
     simfin_api_key: str | None = None
     finnhub_api_key: str | None = None
@@ -74,6 +75,14 @@ class Settings(BaseSettings):
     database_url: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost/sentimentdesk",
         validation_alias=AliasChoices("DATABASE_URL", "SENTIMENTDESK_DATABASE_URL"),
+    )
+    redis_url: str = Field(
+        default="redis://localhost:6379/0",
+        validation_alias=AliasChoices("REDIS_URL", "SENTIMENTDESK_REDIS_URL"),
+    )
+    provider_queue_name: str = Field(
+        default="provider",
+        validation_alias=AliasChoices("PROVIDER_QUEUE_NAME", "SENTIMENTDESK_PROVIDER_QUEUE_NAME"),
     )
 
     weights: WeightSettings = Field(default_factory=WeightSettings)

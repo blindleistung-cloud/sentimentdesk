@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import settings
-from app.db.models import Report, MarketDataSnapshot
+from app.db.models import Report
 from app.db.session import get_session
+from app.jobs.queue import enqueue_provider_fetch
 from app.parsing.markdown import parse_report
-from app.providers.selector import fetch_with_fallback
 from app.schemas.report import OvervaluedStock, ParseRequest, ParseResult
 from app.scoring.scoring import score_layers
 
@@ -39,9 +39,8 @@ async def parse_report_endpoint(
 
     week_id = f"{datetime.date.today().isocalendar().year}-W{datetime.date.today().isocalendar().week:02d}"
 
-    # 2. Fetch provider data (currently stubs)
+    # 2. Extract provider symbols
     symbols = _extract_symbols(parsed.layers.valuation.overvalued_stocks)
-    provider_snapshots_data = [fetch_with_fallback(symbol, week_id) for symbol in symbols]
 
     # 3. Create and save the report to the database
     db_report = Report(
@@ -56,19 +55,20 @@ async def parse_report_endpoint(
         rule_trace=scores.model_dump()["rule_trace"],
     )
 
-    # 4. Create snapshot models and associate them
-    for snapshot_data in provider_snapshots_data:
-        db_snapshot = MarketDataSnapshot(
-            provider=snapshot_data.provider,
-            symbol=snapshot_data.symbol,
-            payload=snapshot_data.payload,
-            cache_key=snapshot_data.cache_key,
-        )
-        db_report.snapshots.append(db_snapshot)
-
     db.add(db_report)
     await db.commit()
     await db.refresh(db_report)
+
+    provider_job_id = None
+    provider_job_status = None
+    if symbols:
+        job = enqueue_provider_fetch(
+            report_id=str(db_report.id),
+            week_id=week_id,
+            symbols=symbols,
+        )
+        provider_job_id = job.id
+        provider_job_status = "queued"
 
     # 5. Return the full result
     return ParseResult(
@@ -76,6 +76,8 @@ async def parse_report_endpoint(
         cleaned_text=parsed.cleaned_text,
         layers=parsed.layers,
         scores=scores,
+        provider_job_id=provider_job_id,
+        provider_job_status=provider_job_status,
         evidence=parsed.evidence,
-        provider_snapshots=provider_snapshots_data,
+        provider_snapshots=[],
     )

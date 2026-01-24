@@ -96,10 +96,15 @@ class ParseRequest(BaseModel):
     raw_text: str
 
 
+ProviderJobStatus = Literal["queued", "running", "finished", "failed"]
+
+
 class ParseResult(BaseModel):
     raw_text: str
     cleaned_text: str
     layers: LayerInput
     scores: ScoreResult
+    provider_job_id: Optional[str] = None
+    provider_job_status: Optional[ProviderJobStatus] = None
     provider_snapshots: list[MarketDataSnapshot] = Field(default_factory=list)
     evidence: list[EvidenceMatch] = Field(default_factory=list)
