@@ -7,6 +7,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from app.config.settings import settings
+from app.cache import get_snapshot, set_snapshot
 from app.schemas.provider import MarketDataSnapshot
 
 
@@ -20,14 +21,19 @@ def _build_url(params: dict[str, str]) -> str:
 
 def fetch_snapshot(symbol: str, week_id: str) -> MarketDataSnapshot:
     cache_key = f"simfin:{symbol}:{week_id}"
+    cached = get_snapshot(cache_key)
+    if cached:
+        return cached
     api_key = settings.providers.simfin_api_key
     if not api_key:
-        return MarketDataSnapshot(
+        snapshot = MarketDataSnapshot(
             provider="simfin",
             symbol=symbol,
             cache_key=cache_key,
             status="missing_key",
         )
+        set_snapshot(snapshot, settings.provider_cache_error_ttl_seconds)
+        return snapshot
 
     url = _build_url({"ticker": symbol})
     request = Request(url, headers={"Authorization": api_key})
@@ -37,44 +43,54 @@ def fetch_snapshot(symbol: str, week_id: str) -> MarketDataSnapshot:
         payload = json.loads(body)
     except HTTPError as exc:
         status = "rate_limited" if exc.code == 429 else "error"
-        return MarketDataSnapshot(
+        snapshot = MarketDataSnapshot(
             provider="simfin",
             symbol=symbol,
             cache_key=cache_key,
             status=status,
         )
+        set_snapshot(snapshot, settings.provider_cache_error_ttl_seconds)
+        return snapshot
     except (URLError, json.JSONDecodeError, TimeoutError, socket.timeout):
-        return MarketDataSnapshot(
+        snapshot = MarketDataSnapshot(
             provider="simfin",
             symbol=symbol,
             cache_key=cache_key,
             status="error",
         )
+        set_snapshot(snapshot, settings.provider_cache_error_ttl_seconds)
+        return snapshot
 
     if not isinstance(payload, dict):
         payload = {"data": payload}
     if "data" not in payload:
-        return MarketDataSnapshot(
+        snapshot = MarketDataSnapshot(
             provider="simfin",
             symbol=symbol,
             cache_key=cache_key,
             status="error",
         )
+        set_snapshot(snapshot, settings.provider_cache_error_ttl_seconds)
+        return snapshot
     if not payload.get("data"):
-        return MarketDataSnapshot(
+        snapshot = MarketDataSnapshot(
             provider="simfin",
             symbol=symbol,
             cache_key=cache_key,
             status="empty",
         )
+        set_snapshot(snapshot, settings.provider_cache_error_ttl_seconds)
+        return snapshot
 
-    return MarketDataSnapshot(
+    snapshot = MarketDataSnapshot(
         provider="simfin",
         symbol=symbol,
         cache_key=cache_key,
         payload=payload,
         status="ok",
     )
+    set_snapshot(snapshot, settings.provider_cache_ttl_seconds)
+    return snapshot
 
 
 def check_api_key(probe_id: str | None = None) -> tuple[bool, int | None]:

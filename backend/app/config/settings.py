@@ -93,6 +93,20 @@ class Settings(BaseSettings):
     risk_thresholds: RiskThresholds = Field(default_factory=RiskThresholds)
     providers: ProviderSettings = Field(default_factory=ProviderSettings)
     parser: ParserSettings = Field(default_factory=ParserSettings)
+    provider_cache_ttl_seconds: int = Field(
+        default=604800,
+        validation_alias=AliasChoices(
+            "PROVIDER_CACHE_TTL_SECONDS",
+            "SENTIMENTDESK_PROVIDER_CACHE_TTL_SECONDS",
+        ),
+    )
+    provider_cache_error_ttl_seconds: int = Field(
+        default=3600,
+        validation_alias=AliasChoices(
+            "PROVIDER_CACHE_ERROR_TTL_SECONDS",
+            "SENTIMENTDESK_PROVIDER_CACHE_ERROR_TTL_SECONDS",
+        ),
+    )
 
 
 settings = Settings()
