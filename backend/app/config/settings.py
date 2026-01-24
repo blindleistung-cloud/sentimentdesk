@@ -38,6 +38,8 @@ class ProviderSettings(BaseSettings):
     )
     simfin_api_key: str | None = None
     finnhub_api_key: str | None = None
+    simfin_base_url: str = "https://backend.simfin.com"
+    simfin_probe_id: str = "200"
 
 
 class ParserSettings(BaseModel):
