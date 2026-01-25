@@ -231,12 +231,12 @@ In hard-cache mode, the system:
 
 ## 11. Development Roadmap (v1)
 
-### Milestone 1 — Core pipeline
+### Milestone 1 — Core pipeline (done)
 
-* Schema A–D input form
-* Validation + rule trace
-* Score calculation
-* Persistence in PostgreSQL
+* [x] Schema A–D input form (parser + manual entry)
+* [x] Validation + rule trace (warn/fail + persisted)
+* [x] Score calculation
+* [x] Persistence in PostgreSQL
 
 ### Milestone 2 — Provider integration + caching
 

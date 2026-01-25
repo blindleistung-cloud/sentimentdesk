@@ -8,12 +8,17 @@
 - Updated SimFin adapter to v3 endpoint with Authorization header and check_api_key; Finnhub adapter used as fallback.
 - Added status column to market_data_snapshots; migrations README includes manual ALTER; verified column exists in running DB.
 - Updated backend Dockerfile to run uvicorn via `uv run`.
+- Added validation result schema (ok/warn/fail) and manual report endpoint `/api/report/manual` with required tickers.
+- Added deterministic validation module (exactly 5 stocks, missing ticker warn/fail, range checks) and persisted validation status/issues to `weekly_reports`.
+- Applied ticker overrides before validation/scoring in `/api/parse`; manual endpoint cleans markdown and queues provider fetches.
+- Updated migrations README with `weekly_reports` validation columns.
+- Updated parse enqueue tests for five-stock rule, validation status, and manual endpoint coverage.
 
 ## Tests
 - `uv run pytest backend/tests/test_smoke_imports.py -q`
 - `uv run pytest backend/tests/test_provider_cache_key.py -q`
 - `uv run pytest backend/tests/test_provider_cache.py -q`
-- `uv run pytest backend/tests/test_parse_enqueues_provider_job.py -q`
+- `uv run pytest backend/tests/test_parse_enqueues_provider_job.py -q` (manual endpoint + validation updates)
 
 ## Commits
 - `1f7d93b` Align Python 3.14 runtime and add backend smoke test

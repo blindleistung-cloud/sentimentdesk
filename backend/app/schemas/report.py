@@ -92,6 +92,20 @@ class ScoreResult(BaseModel):
     rule_trace: list[RuleTraceEntry] = Field(default_factory=list)
 
 
+ValidationStatus = Literal["ok", "warn", "fail"]
+
+
+class ValidationIssue(BaseModel):
+    field: str
+    level: Literal["warn", "fail"]
+    message: str
+
+
+class ValidationResult(BaseModel):
+    status: ValidationStatus
+    issues: list[ValidationIssue] = Field(default_factory=list)
+
+
 class StockTickerOverride(BaseModel):
     name: str
     ticker: Optional[str] = None
@@ -102,6 +116,11 @@ class ParseRequest(BaseModel):
     ticker_overrides: list[StockTickerOverride] = Field(default_factory=list)
 
 
+class ManualReportRequest(BaseModel):
+    raw_text: str
+    layers: LayerInput
+
+
 ProviderJobStatus = Literal["queued", "running", "finished", "failed"]
 
 
@@ -110,6 +129,7 @@ class ParseResult(BaseModel):
     cleaned_text: str
     layers: LayerInput
     scores: ScoreResult
+    validation: ValidationResult
     provider_job_id: Optional[str] = None
     provider_job_status: Optional[ProviderJobStatus] = None
     provider_snapshots: list[MarketDataSnapshot] = Field(default_factory=list)

@@ -25,8 +25,10 @@ class Report(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     week_id = Column(String, unique=True, nullable=False, index=True)
     status = Column(String, default="pending", nullable=False)
+    validation_status = Column(String, default="pending", nullable=False)
     raw_text = Column(Text, nullable=False)
     extracted_inputs = Column("extracted_inputs_json", JSONB)
+    validation_issues = Column("validation_issues_json", JSONB)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 

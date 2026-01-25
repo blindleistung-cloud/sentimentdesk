@@ -85,6 +85,19 @@ export type ScoreResult = {
   }[];
 };
 
+export type ValidationIssue = {
+  field: string;
+  level: "warn" | "fail";
+  message: string;
+};
+
+export type ValidationResult = {
+  status: "ok" | "warn" | "fail";
+  issues: ValidationIssue[];
+};
+
+export type ProviderJobStatus = "queued" | "running" | "finished" | "failed";
+
 export type ParseResult = {
   raw_text: string;
   cleaned_text: string;
@@ -92,9 +105,79 @@ export type ParseResult = {
   provider_snapshots: MarketDataSnapshot[];
   scores: ScoreResult;
   evidence: EvidenceMatch[];
+  validation: ValidationResult;
+  provider_job_id?: string | null;
+  provider_job_status?: ProviderJobStatus | null;
 };
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+
+export class ApiError extends Error {
+  status: number;
+  validation?: ValidationResult;
+
+  constructor(message: string, status: number, validation?: ValidationResult) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.validation = validation;
+  }
+}
+
+async function toApiError(response: Response): Promise<ApiError> {
+  const status = response.status;
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (contentType.includes("application/json")) {
+    const data = (await response.json()) as unknown;
+    const detail =
+      data && typeof data === "object" && "detail" in data
+        ? (data as { detail?: unknown }).detail
+        : data;
+
+    let message = "Request failed.";
+    let validation: ValidationResult | undefined;
+
+    const applyDetail = (value: unknown) => {
+      if (!value || typeof value !== "object") {
+        return;
+      }
+      const detailObj = value as {
+        message?: unknown;
+        validation?: unknown;
+      };
+      if (typeof detailObj.message === "string" && detailObj.message.trim()) {
+        message = detailObj.message;
+      }
+      if (detailObj.validation) {
+        validation = detailObj.validation as ValidationResult;
+      }
+    };
+
+    if (typeof detail === "string") {
+      message = detail;
+    } else if (Array.isArray(detail)) {
+      message = "Request validation failed.";
+    } else {
+      applyDetail(detail);
+    }
+
+    if (data && typeof data === "object") {
+      const dataObj = data as { message?: unknown; validation?: unknown };
+      if (typeof dataObj.message === "string" && dataObj.message.trim()) {
+        message = dataObj.message;
+      }
+      if (!validation && dataObj.validation) {
+        validation = dataObj.validation as ValidationResult;
+      }
+    }
+
+    return new ApiError(message, status, validation);
+  }
+
+  const message = await response.text();
+  return new ApiError(message || "Request failed.", status);
+}
 
 export async function parseReport(
   rawText: string,
@@ -118,8 +201,29 @@ export async function parseReport(
   });
 
   if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || "Failed to parse report.");
+    throw await toApiError(response);
+  }
+
+  return response.json() as Promise<ParseResult>;
+}
+
+export async function submitManualReport(
+  rawText: string,
+  layers: LayerInput,
+): Promise<ParseResult> {
+  const response = await fetch(`${API_URL}/api/report/manual`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      raw_text: rawText,
+      layers,
+    }),
+  });
+
+  if (!response.ok) {
+    throw await toApiError(response);
   }
 
   return response.json() as Promise<ParseResult>;
