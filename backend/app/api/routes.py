@@ -1,6 +1,8 @@
 import datetime
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import settings
@@ -42,22 +44,41 @@ async def parse_report_endpoint(
     # 2. Extract provider symbols
     symbols = _extract_symbols(parsed.layers.valuation.overvalued_stocks)
 
-    # 3. Create and save the report to the database
-    db_report = Report(
-        week_id=week_id,
-        status="processed",
-        raw_text=payload.raw_text,
-        extracted_inputs=parsed.layers.model_dump(),
-        valuation_score=scores.valuation_score,
-        capex_score=scores.capex_score,
-        risk_score=scores.risk_score,
-        composite_score=scores.composite_score,
-        rule_trace=scores.model_dump()["rule_trace"],
-    )
-
-    db.add(db_report)
+    # 3. Create or update the report for the week
+    now = datetime.datetime.utcnow()
+    extracted_inputs = parsed.layers.model_dump()
+    rule_trace = scores.model_dump()["rule_trace"]
+    insert_values = {
+        "week_id": week_id,
+        "status": "processed",
+        "raw_text": payload.raw_text,
+        "extracted_inputs": extracted_inputs,
+        "valuation_score": scores.valuation_score,
+        "capex_score": scores.capex_score,
+        "risk_score": scores.risk_score,
+        "composite_score": scores.composite_score,
+        "rule_trace": rule_trace,
+        "created_at": now,
+        "updated_at": now,
+    }
+    update_values = {
+        Report.status: "processed",
+        Report.raw_text: payload.raw_text,
+        Report.extracted_inputs: extracted_inputs,
+        Report.valuation_score: scores.valuation_score,
+        Report.capex_score: scores.capex_score,
+        Report.risk_score: scores.risk_score,
+        Report.composite_score: scores.composite_score,
+        Report.rule_trace: rule_trace,
+        Report.updated_at: now,
+    }
+    stmt = insert(Report).values(**insert_values)
+    stmt = stmt.on_conflict_do_update(index_elements=[Report.week_id], set_=update_values)
+    await db.execute(stmt)
     await db.commit()
-    await db.refresh(db_report)
+
+    result = await db.execute(select(Report).where(Report.week_id == week_id))
+    db_report = result.scalar_one()
 
     provider_job_id = None
     provider_job_status = None
