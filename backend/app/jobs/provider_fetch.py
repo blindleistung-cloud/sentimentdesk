@@ -25,6 +25,7 @@ async def _fetch_and_store(report_id: str, week_id: str, symbols: list[str]) -> 
                 provider=snapshot_data.provider,
                 symbol=snapshot_data.symbol,
                 payload=snapshot_data.payload,
+                status=snapshot_data.status,
                 cache_key=snapshot_data.cache_key,
             )
             # Idempotent: doppelte cache_keys werden ignoriert.

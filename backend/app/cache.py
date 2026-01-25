@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
 
 from redis import Redis
 
 from app.config.settings import settings
 from app.schemas.provider import MarketDataSnapshot
+
+logger = logging.getLogger(__name__)
 
 
 def _get_client() -> Redis:
@@ -17,6 +20,7 @@ def get_snapshot(cache_key: str) -> MarketDataSnapshot | None:
         client = _get_client()
         raw = client.get(cache_key)
     except Exception:
+        logger.warning("Cache read failed for key=%s", cache_key, exc_info=True)
         return None
 
     if not raw:
@@ -34,4 +38,5 @@ def set_snapshot(snapshot: MarketDataSnapshot, ttl_seconds: int) -> None:
         client = _get_client()
         client.setex(snapshot.cache_key, ttl_seconds, snapshot.model_dump_json())
     except Exception:
+        logger.warning("Cache write failed for key=%s", snapshot.cache_key, exc_info=True)
         return None

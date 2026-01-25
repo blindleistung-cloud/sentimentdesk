@@ -53,6 +53,7 @@ class MarketDataSnapshot(Base):
     symbol = Column(String, nullable=False, index=True)
     as_of_date = Column(DateTime)
     payload = Column("payload_json", JSONB)
+    status = Column(String, default="unknown", nullable=False)
     cache_key = Column(String, unique=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
@@ -60,4 +61,3 @@ class MarketDataSnapshot(Base):
 
     def __repr__(self):
         return f"<MarketDataSnapshot(provider='{self.provider}', symbol='{self.symbol}')>"
-
