@@ -92,8 +92,14 @@ class ScoreResult(BaseModel):
     rule_trace: list[RuleTraceEntry] = Field(default_factory=list)
 
 
+class StockTickerOverride(BaseModel):
+    name: str
+    ticker: Optional[str] = None
+
+
 class ParseRequest(BaseModel):
     raw_text: str
+    ticker_overrides: list[StockTickerOverride] = Field(default_factory=list)
 
 
 ProviderJobStatus = Literal["queued", "running", "finished", "failed"]

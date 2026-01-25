@@ -1,6 +1,6 @@
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { BarChart, Card } from "@tremor/react";
-import { parseReport, ParseResult } from "./lib/api";
+import { parseReport, ParseResult, StockTickerOverride } from "./lib/api";
 
 const scoreFormatter = (value: number) => `${Math.round(value)} / 100`;
 
@@ -9,6 +9,21 @@ export default function App() {
   const [result, setResult] = useState<ParseResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tickerOverrides, setTickerOverrides] = useState<Record<string, string>>(
+    {},
+  );
+
+  useEffect(() => {
+    if (!result) {
+      setTickerOverrides({});
+      return;
+    }
+    const nextOverrides: Record<string, string> = {};
+    result.layers.valuation.overvalued_stocks.forEach((stock) => {
+      nextOverrides[stock.name] = stock.ticker ?? "";
+    });
+    setTickerOverrides(nextOverrides);
+  }, [result]);
 
   const scoreSeries = useMemo(() => {
     if (!result) {
@@ -31,6 +46,38 @@ export default function App() {
     setError(null);
     try {
       const parsed = await parseReport(rawText);
+      setResult(parsed);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Parse failed.";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTickerChange = (name: string, value: string) => {
+    setTickerOverrides((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const buildTickerOverrides = (): StockTickerOverride[] =>
+    Object.entries(tickerOverrides)
+      .map(([name, ticker]) => ({ name, ticker: ticker.trim() }))
+      .filter((entry) => entry.ticker.length > 0);
+
+  const handleApplyTickers = async () => {
+    if (!rawText.trim()) {
+      setError("Paste a weekly report before parsing.");
+      return;
+    }
+    const overrides = buildTickerOverrides();
+    if (!overrides.length) {
+      setError("Add at least one ticker override before updating.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const parsed = await parseReport(rawText, overrides);
       setResult(parsed);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Parse failed.";
@@ -84,6 +131,48 @@ export default function App() {
               value={rawText}
               onChange={(event) => setRawText(event.target.value)}
             />
+
+            {result?.layers.valuation.overvalued_stocks.length ? (
+              <div className="rounded-2xl border border-fog bg-white/70 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-ink/60">
+                      Ticker overrides
+                    </p>
+                    <p className="text-sm text-ink/70">
+                      Add tickers to enrich provider fetches.
+                    </p>
+                  </div>
+                  <button
+                    className="rounded-xl border border-accent/40 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-ink shadow-sm transition hover:border-accent disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={handleApplyTickers}
+                    disabled={loading}
+                  >
+                    {loading ? "Updating..." : "Update tickers"}
+                  </button>
+                </div>
+                <div className="mt-3 grid gap-2">
+                  {result.layers.valuation.overvalued_stocks.map((stock) => (
+                    <div
+                      key={`${stock.rank}-${stock.name}`}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-fog bg-white/80 px-3 py-2"
+                    >
+                      <span className="text-sm font-semibold text-ink">
+                        {stock.rank}. {stock.name}
+                      </span>
+                      <input
+                        className="w-28 rounded-lg border border-fog bg-white px-2 py-1 text-xs uppercase tracking-[0.15em] text-ink outline-none transition focus:border-accent"
+                        placeholder="TICKER"
+                        value={tickerOverrides[stock.name] ?? ""}
+                        onChange={(event) =>
+                          handleTickerChange(stock.name, event.target.value)
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             <div className="flex flex-wrap items-center gap-3">
               <label className="glass-panel flex cursor-pointer items-center gap-2 px-4 py-2 text-sm font-medium text-ink">

@@ -10,7 +10,7 @@ from app.db.models import Report
 from app.db.session import get_session
 from app.jobs.queue import enqueue_provider_fetch
 from app.parsing.markdown import parse_report
-from app.schemas.report import OvervaluedStock, ParseRequest, ParseResult
+from app.schemas.report import OvervaluedStock, ParseRequest, ParseResult, StockTickerOverride
 from app.scoring.scoring import score_layers
 
 router = APIRouter()
@@ -24,6 +24,32 @@ def _extract_symbols(stocks: list[OvervaluedStock]) -> list[str]:
             continue
         symbols.append(symbol)
     return symbols
+
+
+def _normalize_name(name: str) -> str:
+    return name.strip().casefold()
+
+
+def _apply_ticker_overrides(
+    stocks: list[OvervaluedStock], overrides: list[StockTickerOverride]
+) -> None:
+    if not overrides:
+        return
+    override_map: dict[str, str] = {}
+    for override in overrides:
+        name = override.name.strip()
+        if not name:
+            continue
+        ticker = (override.ticker or "").strip()
+        if not ticker:
+            continue
+        override_map[_normalize_name(name)] = ticker.upper()
+    if not override_map:
+        return
+    for stock in stocks:
+        key = _normalize_name(stock.name)
+        if key in override_map:
+            stock.ticker = override_map[key]
 
 
 @router.get("/health")
@@ -42,10 +68,11 @@ async def parse_report_endpoint(
     week_id = f"{datetime.date.today().isocalendar().year}-W{datetime.date.today().isocalendar().week:02d}"
 
     # 2. Extract provider symbols
+    _apply_ticker_overrides(parsed.layers.valuation.overvalued_stocks, payload.ticker_overrides)
     symbols = _extract_symbols(parsed.layers.valuation.overvalued_stocks)
 
     # 3. Create or update the report for the week
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.UTC)
     extracted_inputs = parsed.layers.model_dump()
     rule_trace = scores.model_dump()["rule_trace"]
     insert_values = {

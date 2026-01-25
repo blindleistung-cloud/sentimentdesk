@@ -27,6 +27,11 @@ export type OvervaluedStock = {
   evidence?: EvidenceMatch[];
 };
 
+export type StockTickerOverride = {
+  name: string;
+  ticker: string;
+};
+
 export type CapexItem = {
   company: string;
   year?: number | null;
@@ -91,13 +96,25 @@ export type ParseResult = {
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
-export async function parseReport(rawText: string): Promise<ParseResult> {
+export async function parseReport(
+  rawText: string,
+  tickerOverrides?: StockTickerOverride[],
+): Promise<ParseResult> {
+  const payload: {
+    raw_text: string;
+    ticker_overrides?: StockTickerOverride[];
+  } = { raw_text: rawText };
+
+  if (tickerOverrides && tickerOverrides.length) {
+    payload.ticker_overrides = tickerOverrides;
+  }
+
   const response = await fetch(`${API_URL}/api/parse`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ raw_text: rawText }),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {

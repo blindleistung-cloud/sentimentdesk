@@ -97,3 +97,47 @@ def test_parse_enqueues_provider_job() -> None:
     column_names = {column.name for column, _ in update_mapping}
     assert "extracted_inputs_json" in column_names
     assert "rule_trace_json" in column_names
+
+
+def test_parse_applies_ticker_overrides() -> None:
+    report_id = uuid.UUID("87654321-4321-8765-4321-876543218765")
+    expected_week_id = (
+        f"{datetime.date.today().isocalendar().year}-W"
+        f"{datetime.date.today().isocalendar().week:02d}"
+    )
+    report = Report(id=report_id, week_id=expected_week_id)
+    session = FakeSession(report, expected_week_id)
+
+    layers = LayerInput(
+        valuation=LayerAValuation(
+            overvalued_stocks=[OvervaluedStock(rank=1, name="Test Co", ticker=None)]
+        )
+    )
+    parsed = ParsedContent(cleaned_text="cleaned", layers=layers, evidence=[])
+    scores = ScoreResult(
+        valuation_score=10.0,
+        capex_score=20.0,
+        risk_score=30.0,
+        composite_score=25.0,
+        rule_trace=[],
+    )
+    job = Mock()
+    job.id = "job-456"
+
+    with (
+        patch("app.api.routes.parse_report", return_value=parsed),
+        patch("app.api.routes.score_layers", return_value=scores),
+        patch("app.api.routes.enqueue_provider_fetch", return_value=job) as enqueue_mock,
+    ):
+        payload = ParseRequest(
+            raw_text="raw text",
+            ticker_overrides=[{"name": " test co ", "ticker": "tstx"}],
+        )
+        result = asyncio.run(parse_report_endpoint(payload, db=session))
+
+    enqueue_mock.assert_called_once_with(
+        report_id=str(report_id),
+        week_id=expected_week_id,
+        symbols=["TSTX"],
+    )
+    assert result.layers.valuation.overvalued_stocks[0].ticker == "TSTX"
