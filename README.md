@@ -8,12 +8,15 @@
 
 ## 1. Purpose
 
-SentimentDesk transforms weekly market reports into a **structured input schema** (Layers A–D) and computes a **reproducible composite sentiment score**.
+SentimentDesk ingests weekly market reports with an explicit calendar week (one report per week), extracts the 5-stock focus list (Layer A), and lets you promote those names into a global watchlist. From that decision point, provider data (PE/PB/PCF, trailing-12-month capex, weekly closes) is captured and weekly commentary + mentions are aggregated per stock. The goal is to detect **per-stock trend shifts over rolling 4+ week windows** and surface them in the dashboard.
 
 Key design goals:
 
 * **Objectivity**: metrics-, rules-, and count-based sentiment; no “tone” guessing
 * **Traceability**: every score can be explained back to rules and fields (rule trace)
+* **Consistency**: explicit calendar week selection; one report per week unless overwrite is confirmed
+* **Watchlist-driven**: focus list is the weekly candidate pool; user promotes names to a global watchlist
+* **Trend-first**: per-stock signals (weekly closes + PE/PB/PCF + trailing-12-month capex trend)
 * **API-efficient**: centralized provider access with **hard caching**, dedupe, and rate-limit awareness
 * **Internal-only**: runs on a Raspberry Pi OS–optimized Debian distribution, reachable **only inside the network**
 * **Composable**: layer weights and layer fields are configurable in settings
@@ -38,14 +41,16 @@ Non-goals:
 
 ### Data flow
 
-1. User imports/pastes weekly report (Markdown/Text)
-2. Parser extracts candidate fields (A–D) and risk-cluster counts (C)
-3. Worker fetches missing fundamentals/capex data via **2 providers** (primary + fallback)
-4. Normalizer maps provider outputs into a unified internal schema
-5. Validator enforces types/ranges/missing-field rules
-6. Scoring engine computes V/C/R and composite sentiment
-7. Results stored with full provenance (raw text + extracted schema + snapshot refs)
-8. UI renders dashboards and charts via **Tremor**
+1. User selects the calendar week and imports/pastes the weekly report (Markdown/Text)
+2. API enforces one report per week; overwrite requires explicit confirmation
+3. Parser extracts the 5-stock focus list (Layer A) plus capex/risk context (Layers B/C)
+4. User promotes focus stocks into a global watchlist
+5. Worker fetches provider fundamentals (PE/PB/PCF + trailing-12-month capex), weekly candles for true weekly closes, and index quotes for Layer D
+6. Normalizer maps provider outputs into a unified internal schema
+7. Validator enforces types/ranges/missing-field rules
+8. Scoring engine computes V/C/R and composite sentiment
+9. Results stored with full provenance (raw text + extracted schema + report-stock mapping + snapshot refs)
+10. UI renders the watchlist dashboard with per-stock drill-downs and aggregated weekly commentary
 
 ---
 
@@ -53,7 +58,7 @@ Non-goals:
 
 ### Backend
 
-* Python 3.12
+* Python 3.14
 * FastAPI (REST)
 * Pydantic (schema + validation)
 * SQLAlchemy / asyncpg (PostgreSQL)
@@ -86,10 +91,10 @@ Target layout (some folders will be added as milestones land):
 
 ### Layers
 
-* **A – Valuation Layer** (scoring)
+* **A – Valuation Layer** (scoring; exactly 5 focus stocks that can be promoted to the watchlist)
 * **B – Capex Layer** (scoring)
 * **C – Risk Narrative Layer** (scoring; count-based clusters)
-* **D – Market Context Layer** (non-scoring by default)
+* **D – Market Context Layer** (non-scoring by default; index moves from provider data)
 
 ### Composite score
 
@@ -134,7 +139,7 @@ A concrete schema (YAML/JSON) will be added in `config/schema.json`.
 ### Selection criteria (v1)
 
 * **Free tier / no direct cost** (acceptable: free account + API key)
-* Fundamentals and financial statements sufficient to compute **KGV/KBV/KCV** (or their components)
+* Fundamentals and financial statements sufficient to compute **PE/PB/PCF** (or their components)
 * Capex or cash-flow line items sufficient for **Capex-related** fields
 * Stable documentation and reasonable rate limits
 
@@ -186,12 +191,28 @@ In hard-cache mode, the system:
 
 ### `weekly_reports`
 
-* `week_id` (e.g., 2026-W03)
-* `date_range`
+* `week_id` (unique, e.g., 2026-W03)
 * `raw_text`
 * `extracted_inputs_json` (A–D)
-* `validation_status`
+* `validation_status` + `validation_issues_json`
+* `valuation_score` / `capex_score` / `risk_score` / `composite_score`
+* `rule_trace_json`
 * `created_at`
+
+### `report_stocks`
+
+* `report_id`
+* `ticker` / `name` / `rank`
+* `focus_commentary`
+* `mention_snippets_json`
+* `pe_ratio` / `pb_ratio` / `pcf_ratio`
+* `created_at`
+
+### `watchlist_items`
+
+* `ticker` / `name`
+* `active`
+* `added_at` / `removed_at`
 
 ### `market_data_snapshots`
 
@@ -201,16 +222,8 @@ In hard-cache mode, the system:
 * `as_of_date`
 * `payload_json`
 * `cache_key`
+* `status`
 * `created_at`
-
-### `scores`
-
-* `week_id`
-* `valuation_score`
-* `capex_score`
-* `risk_score`
-* `composite_score`
-* `rule_trace_json`
 
 ---
 
@@ -237,6 +250,9 @@ In hard-cache mode, the system:
 * [x] Validation + rule trace (warn/fail + persisted)
 * [x] Score calculation
 * [x] Persistence in PostgreSQL
+* [x] One report per calendar week (explicit week confirmation + overwrite guard)
+* [x] Report-stock mapping (focus commentary + mentions)
+* [x] Global watchlist endpoints
 
 ### Milestone 2 — Provider integration + caching
 
@@ -244,6 +260,7 @@ In hard-cache mode, the system:
 * Fallback provider adapter
 * Normalizer to `MarketDataSnapshot`
 * Redis caching + TTL policies
+* Weekly closes (Finnhub candles) for watchlist stocks
 
 ### Milestone 3 — Worker/Scheduler
 
@@ -251,10 +268,12 @@ In hard-cache mode, the system:
 * On-demand refresh
 * Rate-limit handling and budgets
 
-### Milestone 4 — Tremor dashboards
+### Milestone 4 — Trend dashboards
 
-* Composite time series
-* Layer breakdown charts
+* Per-stock 4+ week trend charts (PE/PB/PCF + capex trend)
+* Per-stock drill-down with aggregated weekly commentary + weekly closes
+* Settings area to adjust inputs, add reports and watchlist entries, focus deep-dive for a watchlist stock, and a macroeconomic tab for sentiment shifts
+* Trend delta highlights and ranking
 * Alerts view (threshold-based)
 
 ---
@@ -269,14 +288,15 @@ SentimentDesk is a decision-support tool. It does not provide financial advice o
 
 1. Read `AGENTS.md` for workflows, constraints, and commands.
 2. Keep your weekly report Markdown samples handy (recommended: `docs/samples/weekly-reports/`) to test parsing and input flow.
-3. If `uv` cache initialization fails due to permissions, set `UV_CACHE_DIR` to a writable folder before running `uv` commands (create the folder if needed). Examples:
+3. In the UI, select the report week (YYYY-Www) and confirm it before parsing; enable overwrite only to replace an existing week.
+4. If `uv` cache initialization fails due to permissions, set `UV_CACHE_DIR` to a writable folder before running `uv` commands (create the folder if needed). Examples:
 ```
 $env:UV_CACHE_DIR = "$PWD\\.uv-cache"
 ```
 ```
 export UV_CACHE_DIR="$PWD/.uv-cache"
 ```
-4. When `infra/docker-compose.yml` is present, run:
+5. When `infra/docker-compose.yml` is present, run:
 
 ```
 docker compose -f infra/docker-compose.yml up --build

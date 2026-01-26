@@ -28,7 +28,7 @@ FOOTNOTE_REF_RE = re.compile(r"\[\^[^\]]+\]")
 SECTION_HEADER_RE = re.compile(r"^#{1,6}\s+(.+)$")
 
 STOCK_HEADER_RE = re.compile(
-    r"^\s*(?:#+\s*)?(?:\*{0,2})?(?:Platz\s*)?(\d+)[\.:\)]?\s*(?:\*{0,2})?(.+?)\s*(?:\(([^)]+)\))?\s*(?:[-\u2013\u2014].*)?$",
+    r"^\s*(?:#+\s*)?(?:\*{0,2})?(?:Platz\s*)?(\d+)[\.:\)]?\s*(?:\*{0,2})?(.+?)\s*(?:\(([^)]+)\))?\s*(?:[-\u2013\u2014]\s*(.*))?$",
     re.IGNORECASE,
 )
 
@@ -131,12 +131,14 @@ def extract_overvalued_stocks(section_text: str) -> tuple[list[OvervaluedStock],
             name = re.split(r"\s*[-\u2013\u2014]\s*", name)[0].strip()
             if "die fünf" in name.lower():
                 continue
+            commentary = (match.group(4) or "").strip() or None
             if current:
                 blocks.append(current)
             current = {
                 "rank": int(match.group(1)),
                 "name": name,
                 "ticker": (match.group(3) or "").strip() or None,
+                "commentary": commentary,
                 "lines": [],
             }
             continue
@@ -150,6 +152,13 @@ def extract_overvalued_stocks(section_text: str) -> tuple[list[OvervaluedStock],
 
     for block in blocks:
         block_text = "\n".join(block["lines"]) if block.get("lines") else ""
+        line_commentary = " ".join(line.strip() for line in block.get("lines", []) if line.strip())
+        commentary_parts = []
+        if block.get("commentary"):
+            commentary_parts.append(str(block["commentary"]))
+        if line_commentary:
+            commentary_parts.append(line_commentary)
+        commentary = " ".join(commentary_parts).strip() or None
         pe_ratio, pe_evidence = extract_ratio(
             block_text,
             [r"\bKGV[^0-9]*[0-9]+", r"\bP\s*/\s*E[^0-9]*[0-9]+", r"price[- ]to[- ]earnings[^0-9]*[0-9]+"],
@@ -173,6 +182,7 @@ def extract_overvalued_stocks(section_text: str) -> tuple[list[OvervaluedStock],
                 rank=block["rank"],
                 name=block["name"],
                 ticker=block["ticker"],
+                commentary=commentary,
                 pe_ratio=pe_ratio,
                 pb_ratio=pb_ratio,
                 pcf_ratio=pcf_ratio,
@@ -181,6 +191,42 @@ def extract_overvalued_stocks(section_text: str) -> tuple[list[OvervaluedStock],
         )
 
     return stocks, evidence
+
+
+def extract_stock_mentions(
+    cleaned_text: str, stocks: list[OvervaluedStock]
+) -> dict[str, list[str]]:
+    mentions: dict[str, list[str]] = {}
+    targets: list[tuple[str, str]] = []
+
+    for stock in stocks:
+        ticker = (stock.ticker or "").strip().upper()
+        name = stock.name.strip()
+        if not ticker or not name:
+            continue
+        mentions[ticker] = []
+        targets.append((ticker, fold_text(name)))
+
+    if not targets:
+        return mentions
+
+    for raw_line in cleaned_text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if STOCK_HEADER_RE.match(line):
+            continue
+        line_fold = fold_text(line)
+        for ticker, name_fold in targets:
+            if re.search(rf"\b{re.escape(ticker)}\b", line, re.IGNORECASE):
+                if line not in mentions[ticker]:
+                    mentions[ticker].append(line)
+                continue
+            if name_fold and name_fold in line_fold:
+                if line not in mentions[ticker]:
+                    mentions[ticker].append(line)
+
+    return mentions
 
 
 def extract_capex(section_text: str) -> tuple[LayerBCapex, list[EvidenceMatch]]:

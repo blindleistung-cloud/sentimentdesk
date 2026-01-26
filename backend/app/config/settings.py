@@ -93,6 +93,20 @@ class Settings(BaseSettings):
     risk_thresholds: RiskThresholds = Field(default_factory=RiskThresholds)
     providers: ProviderSettings = Field(default_factory=ProviderSettings)
     parser: ParserSettings = Field(default_factory=ParserSettings)
+    market_index_symbols: Dict[str, str] = Field(
+        default_factory=lambda: {
+            "NYSE": "^NYA",
+            "Nasdaq": "^IXIC",
+            "Shanghai SSE Composite": "000001.SS",
+            "Tokyo Nikkei 225": "^N225",
+            "Hong Kong Hang Seng": "^HSI",
+            "Euronext 100": "^N100",
+            "NSE Nifty 50": "^NSEI",
+            "Shenzhen SZSE Component": "399001.SZ",
+            "TSX Composite": "^GSPTSE",
+            "LSE FTSE 100": "^FTSE",
+        }
+    )
     provider_cache_ttl_seconds: int = Field(
         default=604800,
         validation_alias=AliasChoices(

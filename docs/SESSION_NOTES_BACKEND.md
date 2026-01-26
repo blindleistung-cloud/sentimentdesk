@@ -13,6 +13,9 @@
 - Applied ticker overrides before validation/scoring in `/api/parse`; manual endpoint cleans markdown and queues provider fetches.
 - Updated migrations README with `weekly_reports` validation columns.
 - Updated parse enqueue tests for five-stock rule, validation status, and manual endpoint coverage.
+- Added watchlist + report-stock mapping (focus commentary + mentions) and stock history endpoints.
+- Fetch weekly Finnhub candles for watchlist stocks to store true weekly closes.
+- Require explicit `week_id` for parse/manual endpoints; block duplicate week unless `allow_overwrite` is set.
 
 ## Tests
 - `uv run pytest backend/tests/test_smoke_imports.py -q`

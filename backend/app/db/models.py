@@ -4,6 +4,7 @@ import datetime
 import uuid
 
 from sqlalchemy import (
+    Boolean,
     Column,
     DateTime,
     Float,
@@ -11,6 +12,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import declarative_base, relationship
@@ -41,6 +43,7 @@ class Report(Base):
 
     # Snapshots relationship (1-to-many)
     snapshots = relationship("MarketDataSnapshot", back_populates="report")
+    report_stocks = relationship("ReportStock", back_populates="report")
 
     def __repr__(self):
         return f"<Report(week_id='{self.week_id}', status='{self.status}')>"
@@ -63,3 +66,41 @@ class MarketDataSnapshot(Base):
 
     def __repr__(self):
         return f"<MarketDataSnapshot(provider='{self.provider}', symbol='{self.symbol}')>"
+
+
+class WatchlistItem(Base):
+    __tablename__ = "watchlist_items"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    ticker = Column(String, unique=True, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    active = Column(Boolean, default=True, nullable=False)
+    added_at = Column(DateTime, default=datetime.datetime.utcnow)
+    removed_at = Column(DateTime)
+
+    def __repr__(self):
+        return f"<WatchlistItem(ticker='{self.ticker}', active='{self.active}')>"
+
+
+class ReportStock(Base):
+    __tablename__ = "report_stocks"
+    __table_args__ = (
+        UniqueConstraint("report_id", "ticker", name="report_stocks_report_id_ticker_key"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    report_id = Column(UUID(as_uuid=True), ForeignKey("weekly_reports.id"), nullable=False)
+    ticker = Column(String, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    rank = Column(Integer)
+    focus_commentary = Column(Text)
+    mention_snippets = Column("mention_snippets_json", JSONB)
+    pe_ratio = Column(Float)
+    pb_ratio = Column(Float)
+    pcf_ratio = Column(Float)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    report = relationship("Report", back_populates="report_stocks")
+
+    def __repr__(self):
+        return f"<ReportStock(ticker='{self.ticker}', report_id='{self.report_id}')>"

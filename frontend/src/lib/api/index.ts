@@ -21,6 +21,7 @@ export type OvervaluedStock = {
   rank: number;
   name: string;
   ticker?: string | null;
+  commentary?: string | null;
   pe_ratio?: RatioValue | null;
   pb_ratio?: RatioValue | null;
   pcf_ratio?: RatioValue | null;
@@ -110,6 +111,45 @@ export type ParseResult = {
   provider_job_status?: ProviderJobStatus | null;
 };
 
+export type WatchlistItem = {
+  ticker: string;
+  name: string;
+  active: boolean;
+  added_at: string;
+  removed_at?: string | null;
+};
+
+export type WatchlistRequest = {
+  ticker: string;
+  name: string;
+};
+
+export type WeeklyClose = {
+  week_start: string;
+  close: number;
+};
+
+export type StockReportEntry = {
+  week_id: string;
+  report_id: string;
+  rank?: number | null;
+  focus_commentary?: string | null;
+  mention_snippets: string[];
+  pe_ratio?: number | null;
+  pb_ratio?: number | null;
+  pcf_ratio?: number | null;
+  created_at?: string | null;
+};
+
+export type StockHistory = {
+  ticker: string;
+  name?: string | null;
+  watchlist_active: boolean;
+  watchlist_added_at?: string | null;
+  report_entries: StockReportEntry[];
+  weekly_closes: WeeklyClose[];
+};
+
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 export class ApiError extends Error {
@@ -181,12 +221,16 @@ async function toApiError(response: Response): Promise<ApiError> {
 
 export async function parseReport(
   rawText: string,
+  weekId: string,
   tickerOverrides?: StockTickerOverride[],
+  allowOverwrite = false,
 ): Promise<ParseResult> {
   const payload: {
     raw_text: string;
+    week_id: string;
+    allow_overwrite: boolean;
     ticker_overrides?: StockTickerOverride[];
-  } = { raw_text: rawText };
+  } = { raw_text: rawText, week_id: weekId, allow_overwrite: allowOverwrite };
 
   if (tickerOverrides && tickerOverrides.length) {
     payload.ticker_overrides = tickerOverrides;
@@ -209,7 +253,9 @@ export async function parseReport(
 
 export async function submitManualReport(
   rawText: string,
+  weekId: string,
   layers: LayerInput,
+  allowOverwrite = false,
 ): Promise<ParseResult> {
   const response = await fetch(`${API_URL}/api/report/manual`, {
     method: "POST",
@@ -218,6 +264,8 @@ export async function submitManualReport(
     },
     body: JSON.stringify({
       raw_text: rawText,
+      week_id: weekId,
+      allow_overwrite: allowOverwrite,
       layers,
     }),
   });
@@ -227,4 +275,59 @@ export async function submitManualReport(
   }
 
   return response.json() as Promise<ParseResult>;
+}
+
+export async function listWatchlist(): Promise<WatchlistItem[]> {
+  const response = await fetch(`${API_URL}/api/watchlist`);
+
+  if (!response.ok) {
+    throw await toApiError(response);
+  }
+
+  return response.json() as Promise<WatchlistItem[]>;
+}
+
+export async function addWatchlistItem(
+  payload: WatchlistRequest,
+): Promise<WatchlistItem> {
+  const response = await fetch(`${API_URL}/api/watchlist`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw await toApiError(response);
+  }
+
+  return response.json() as Promise<WatchlistItem>;
+}
+
+export async function removeWatchlistItem(ticker: string): Promise<WatchlistItem> {
+  const response = await fetch(
+    `${API_URL}/api/watchlist/${encodeURIComponent(ticker)}`,
+    {
+      method: "DELETE",
+    },
+  );
+
+  if (!response.ok) {
+    throw await toApiError(response);
+  }
+
+  return response.json() as Promise<WatchlistItem>;
+}
+
+export async function getStockHistory(ticker: string): Promise<StockHistory> {
+  const response = await fetch(
+    `${API_URL}/api/stocks/${encodeURIComponent(ticker)}`,
+  );
+
+  if (!response.ok) {
+    throw await toApiError(response);
+  }
+
+  return response.json() as Promise<StockHistory>;
 }

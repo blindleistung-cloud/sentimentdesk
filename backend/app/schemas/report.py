@@ -23,6 +23,7 @@ class OvervaluedStock(BaseModel):
     rank: int
     name: str
     ticker: Optional[str] = None
+    commentary: Optional[str] = None
     pe_ratio: Optional[RatioValue] = None
     pb_ratio: Optional[RatioValue] = None
     pcf_ratio: Optional[RatioValue] = None
@@ -113,11 +114,15 @@ class StockTickerOverride(BaseModel):
 
 class ParseRequest(BaseModel):
     raw_text: str
+    week_id: str
+    allow_overwrite: bool = False
     ticker_overrides: list[StockTickerOverride] = Field(default_factory=list)
 
 
 class ManualReportRequest(BaseModel):
     raw_text: str
+    week_id: str
+    allow_overwrite: bool = False
     layers: LayerInput
 
 
