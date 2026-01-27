@@ -67,7 +67,7 @@ async def _fetch_and_store(report_id: str, week_id: str, symbols: list[str]) -> 
 
         index_moves: list[IndexMove] = []
         for index_name, symbol in settings.market_index_symbols.items():
-            snapshot_data = finnhub.fetch_snapshot(symbol, week_id)
+            snapshot_data = fetch_with_fallback(symbol, week_id)
             stmt = insert(MarketDataSnapshot).values(
                 report_id=report_uuid,
                 provider=snapshot_data.provider,

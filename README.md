@@ -256,12 +256,12 @@ In hard-cache mode, the system:
 
 ### Milestone 2 — Provider integration + caching
 
-* Primary provider adapter
-* Fallback provider adapter
+* Primary provider adapter (stocks via SimFin)
+* Index adapter (indices via Finnhub)
+* Stock fallback adapter (SimFin → Finnhub)
 * Normalizer to `MarketDataSnapshot`
 * Redis caching + TTL policies
 * Weekly closes (Finnhub candles) for watchlist stocks
-
 ### Milestone 3 — Worker/Scheduler
 
 * Weekly scheduled run
